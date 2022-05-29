@@ -1,0 +1,41 @@
+name: Publish Snapshot
+
+on:
+    push:
+        paths:
+            - '**.kt'
+            - '**.kts'
+            - '**.yaml'
+            - '**.properties'
+        branches:
+            - master
+
+env:
+    GITHUB_TARGET_REPO: "https://maven.martmists.com/snapshots"
+    DEPLOY_TYPE: "snapshot"
+    DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+
+jobs:
+    build-libraries:
+        runs-on: ubuntu-latest
+        steps:
+            # Check out project
+            - uses: actions/checkout@v2
+
+            # Set up java
+            - uses: actions/setup-java@v2
+              with:
+                  java-version: '11'
+                  distribution: 'adopt'
+
+            # Build all
+            - name: Build with Gradle
+              uses: gradle/gradle-build-action@v2
+              with:
+                  arguments: build
+
+            # Publish modules
+            - name: Publish to Maven
+              uses: gradle/gradle-build-action@v2
+              with:
+                  arguments: publish
