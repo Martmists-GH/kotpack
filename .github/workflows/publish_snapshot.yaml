@@ -16,7 +16,7 @@ env:
     DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
 
 jobs:
-    build-libraries:
+    publish:
         runs-on: ubuntu-latest
         steps:
             # Check out project
