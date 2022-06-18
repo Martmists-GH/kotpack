@@ -1,4 +1,5 @@
 import com.martmists.kotpack.GrammarParser
+import com.martmists.kotpack.RuleScope
 import kotlin.test.*
 
 class DummyParser(input: String) : GrammarParser<String>(input) {
@@ -30,7 +31,7 @@ class DummyParser(input: String) : GrammarParser<String>(input) {
         ::parens
     )
 
-    private val commaList: () -> String by sequence(memoLeft {
+    private val commaList: () -> String by memoLeft {
         val l = first(
             ::commaList,
             ::term
@@ -40,7 +41,7 @@ class DummyParser(input: String) : GrammarParser<String>(input) {
         }
         val r = term()
         "$l,$r"
-    })
+    }
 
     private val number by regex("[1-9][0-9]*")
 

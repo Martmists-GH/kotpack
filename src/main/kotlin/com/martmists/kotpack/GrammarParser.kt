@@ -9,8 +9,8 @@ abstract class GrammarParser<T>(internal val input: String) {
 
     // The code for `memo` and `memoLeft` was more-or-less adapted from Guido van Rossum's implementation on
     // his blog on PEG parsers: https://medium.com/@gvanrossum_83706/peg-parsing-series-de5d41b2ed60
-    private data class Memo(val res: Any, val index: Int)
-    protected fun <V: Any> memo(func: RuleScope.() -> V) : RuleScope.() -> V {
+    private data class Memo(val res: Any?, val index: Int)
+    protected fun <V> memoImpl(func: RuleScope.() -> V) : RuleScope.() -> V {
         val memo = mutableMapOf<Int, Memo>()
 
         return {
@@ -27,7 +27,7 @@ abstract class GrammarParser<T>(internal val input: String) {
         }
     }
 
-    protected fun <V: Any> memoLeft(func: RuleScope.() -> V) : RuleScope.() -> V {
+    protected fun <V> memoLeftImpl(func: RuleScope.() -> V) : RuleScope.() -> V {
         val memo = mutableMapOf<Int, Memo>()
 
         return {
@@ -37,7 +37,7 @@ abstract class GrammarParser<T>(internal val input: String) {
                 pos = m.index
                 m.res as V
             } else {
-                var lastres: Any = NoMatchException(rule, this@GrammarParser, "Exception in memoLeft happened; you should never see this! Open an issue if you do.")
+                var lastres: Any? = NoMatchException(rule, this@GrammarParser, "Exception in memoLeft happened; you should never see this! Open an issue if you do.")
                 var lastpos = -1
                 memo[p] = Memo(lastres, lastpos)
                 while (true) {
@@ -108,6 +108,16 @@ abstract class GrammarParser<T>(internal val input: String) {
         }
     }
 
+    protected fun RuleScope.memoLeft(block: RuleScope.() -> Any?) = this@GrammarParser.memoLeft(block).resolve()
+    protected fun <V> memoLeft(block: RuleScope.() -> V) = DelegateRunner(memoLeftImpl {
+        block()
+    })
+
+    protected fun RuleScope.memo(block: RuleScope.() -> Any?) = this@GrammarParser.memo(block).resolve()
+    protected fun <V> memo(block: RuleScope.() -> V) = DelegateRunner(memoImpl {
+        block()
+    })
+
     protected fun RuleScope.char(c: Char) = this@GrammarParser.char(c).resolve()
     protected fun char(c: Char) = DelegateRunner {
         if (!remaining.startsWith(c)) {
@@ -118,7 +128,7 @@ abstract class GrammarParser<T>(internal val input: String) {
     }
 
     protected fun RuleScope.string(s: String) = this@GrammarParser.string(s).resolve()
-    protected fun <V: Any> string(s: String, block: RuleScope.(String) -> V) = sequence { block(string(s)) }
+    protected fun <V> string(s: String, block: RuleScope.(String) -> V) = sequence { block(string(s)) }
     protected fun string(s: String) = DelegateRunner {
         if (!remaining.startsWith(s)) {
             throwExc(rule, "Expected '$s'")
@@ -128,7 +138,7 @@ abstract class GrammarParser<T>(internal val input: String) {
     }
 
     protected fun RuleScope.regex(r: String) = this@GrammarParser.regex(r).resolve()
-    protected fun <V: Any> regex(r: String, block: RuleScope.(String) -> V) = sequence { block(regex(r)) }
+    protected fun <V> regex(r: String, block: RuleScope.(String) -> V) = sequence { block(regex(r)) }
     protected fun regex(r: String) = DelegateRunner {
         val match = Regex(r).matchAt(remaining, 0) ?: throwExc(rule, "Expected matching regex /${r.replace("\n", "\\n")}/")
         match.groups[0]!!.value.also {
@@ -136,8 +146,8 @@ abstract class GrammarParser<T>(internal val input: String) {
         }
     }
 
-    protected fun <V: Any> RuleScope.sequence(block: RuleScope.() -> V) = this@GrammarParser.sequence(block).resolve()
-    protected fun <V: Any> sequence(block: RuleScope.() -> V) = DelegateRunner {
+    protected fun <V> RuleScope.sequence(block: RuleScope.() -> V) = this@GrammarParser.sequence(block).resolve()
+    protected fun <V> sequence(block: RuleScope.() -> V) = DelegateRunner {
         try {
             block()
         } catch (e: NoMatchException) {
@@ -148,8 +158,8 @@ abstract class GrammarParser<T>(internal val input: String) {
         }
     }
 
-    protected fun <V: Any> RuleScope.first(vararg blocks: () -> () -> V) = this@GrammarParser.first(*blocks).resolve()
-    protected fun <V: Any> first(vararg blocks: () -> () -> V) = DelegateRunner {
+    protected fun <V> RuleScope.first(vararg blocks: () -> () -> V) = this@GrammarParser.first(*blocks).resolve()
+    protected fun <V> first(vararg blocks: () -> () -> V) = DelegateRunner {
         val errors = mutableListOf<NoMatchException>()
         for (block in blocks) {
             try {
@@ -165,19 +175,19 @@ abstract class GrammarParser<T>(internal val input: String) {
         throwExc(rule, "Expected one of: [${errors.joinToString(transform = NoMatchException::rule)}]", errors.minByOrNull(NoMatchException::depth))
     }
 
-    protected fun <V: Any> RuleScope.optional(block: RuleScope.() -> V) = this@GrammarParser.optional(block).resolve()
-    protected fun <V: Any> optional(block: RuleScope.() -> V) = DelegateRunner(memo {
+    protected fun <V> RuleScope.optional(block: RuleScope.() -> V) = this@GrammarParser.optional(block).resolve()
+    protected fun <V> optional(block: RuleScope.() -> V) = DelegateRunner {
         try {
             save()
-            Optional.of(block()).also { drop() }
+            block().also { drop() }
         } catch (e: NoMatchException) {
             restore()
-            Optional.empty()
+            null
         }
-    })
+    }
 
-    protected fun <V: Any> RuleScope.zeroOrMore(block: RuleScope.() -> V) = this@GrammarParser.zeroOrMore(block).resolve()
-    protected fun <V: Any> zeroOrMore(block: RuleScope.() -> V) = DelegateRunner<List<V>> {
+    protected fun <V> RuleScope.zeroOrMore(block: RuleScope.() -> V) = this@GrammarParser.zeroOrMore(block).resolve()
+    protected fun <V> zeroOrMore(block: RuleScope.() -> V) = DelegateRunner<List<V>> {
         val results = mutableListOf<V>()
         while (remaining.isNotEmpty()) {
             try {
@@ -191,8 +201,8 @@ abstract class GrammarParser<T>(internal val input: String) {
         results
     }
 
-    protected fun <V: Any> RuleScope.oneOrMore(block: RuleScope.() -> V) = this@GrammarParser.oneOrMore(block).resolve()
-    protected fun <V: Any> oneOrMore(block: RuleScope.() -> V) = DelegateRunner<List<V>> {
+    protected fun <V> RuleScope.oneOrMore(block: RuleScope.() -> V) = this@GrammarParser.oneOrMore(block).resolve()
+    protected fun <V> oneOrMore(block: RuleScope.() -> V) = DelegateRunner<List<V>> {
         val results = mutableListOf<V>()
         val errors = mutableListOf<NoMatchException>()
         while (remaining.isNotEmpty()) {

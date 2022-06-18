@@ -23,7 +23,7 @@ class MathParser(input: String) : GrammarParser<Double>(input) {  // root rule r
         ::num
     )
 
-    private val op by sequence(memoLeft {  // we use memoLeft to avoid crashing from left-recursion
+    private val op by memoLeft {  // we use memoLeft to avoid crashing from left-recursion
         val left = expression()
         val op = whitespace(optional=true) {  // remove whitespace before *and* after everything in this block
             regex("[+\\-/*]")
@@ -41,7 +41,7 @@ class MathParser(input: String) : GrammarParser<Double>(input) {  // root rule r
             "/" -> left / right
             else -> throw IllegalStateException("Unknown operator: $op")
         }
-    })
+    }
 
     private val parentheses by sequence {
         char('(')  // match a single character
@@ -53,7 +53,7 @@ class MathParser(input: String) : GrammarParser<Double>(input) {  // root rule r
     }
 
     private val num by regex("[0-9]+(\\.[0-9]+)?") {
-        // regex. string and char allow for callbacks to transform the result if they match
+        // regex, string and char allow for callbacks to transform the result if they match
         it.toDouble()
     }
 }
