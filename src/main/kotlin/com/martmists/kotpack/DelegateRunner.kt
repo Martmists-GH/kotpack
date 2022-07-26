@@ -2,7 +2,7 @@ package com.martmists.kotpack
 
 import kotlin.reflect.KProperty
 
-class DelegateRunner<V>(val block: RuleScope.() -> V) {
+class DelegateRunner<V>(var block: RuleScope.() -> V) {
     private lateinit var func: () -> V
     operator fun getValue(thisRef: Any?, prop: KProperty<*>): () -> V  = func
 

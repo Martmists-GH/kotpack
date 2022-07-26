@@ -108,12 +108,16 @@ abstract class GrammarParser<T>(internal val input: String) {
         }
     }
 
-    protected fun RuleScope.memoLeft(block: RuleScope.() -> Any?) = this@GrammarParser.memoLeft(block).resolve()
+    protected fun <V> DelegateRunner<V>.memoLeft() {
+        block = memoLeftImpl(block)
+    }
     protected fun <V> memoLeft(block: RuleScope.() -> V) = DelegateRunner(memoLeftImpl {
         block()
     })
 
-    protected fun RuleScope.memo(block: RuleScope.() -> Any?) = this@GrammarParser.memo(block).resolve()
+    protected fun <V> DelegateRunner<V>.memo() {
+        block = memoImpl(block)
+    }
     protected fun <V> memo(block: RuleScope.() -> V) = DelegateRunner(memoImpl {
         block()
     })
@@ -158,6 +162,13 @@ abstract class GrammarParser<T>(internal val input: String) {
         }
     }
 
+    /*
+     * Should only be used inside of first() args
+     */
+    protected fun <V> firstBlock(block: RuleScope.() -> V): () -> () -> V {
+        val firstBlock by sequence(block)
+        return { firstBlock }
+    }
     protected fun <V> RuleScope.first(vararg blocks: () -> () -> V) = this@GrammarParser.first(*blocks).resolve()
     protected fun <V> first(vararg blocks: () -> () -> V) = DelegateRunner {
         val errors = mutableListOf<NoMatchException>()
