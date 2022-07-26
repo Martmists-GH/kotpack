@@ -108,15 +108,17 @@ abstract class GrammarParser<T>(internal val input: String) {
         }
     }
 
-    protected fun <V> DelegateRunner<V>.memoLeft() {
+    protected fun <V> DelegateRunner<V>.memoLeft(): DelegateRunner<V> {
         block = memoLeftImpl(block)
+        return this
     }
     protected fun <V> memoLeft(block: RuleScope.() -> V) = DelegateRunner(memoLeftImpl {
         block()
     })
 
-    protected fun <V> DelegateRunner<V>.memo() {
+    protected fun <V> DelegateRunner<V>.memo(): DelegateRunner<V> {
         block = memoImpl(block)
+        return this
     }
     protected fun <V> memo(block: RuleScope.() -> V) = DelegateRunner(memoImpl {
         block()
