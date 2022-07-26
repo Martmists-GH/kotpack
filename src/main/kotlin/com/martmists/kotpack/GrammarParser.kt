@@ -214,6 +214,16 @@ abstract class GrammarParser<T>(internal val input: String) {
         results
     }
 
+    protected fun <V> RuleScope.separated(separator: RuleScope.() -> Unit, required: Boolean = false, block: RuleScope.() -> V) = this@GrammarParser.separated(separator, required, block).resolve()
+    protected fun <V> separated(separator: RuleScope.() -> Unit, required: Boolean = false, block: RuleScope.() -> V) = sequence {
+        val first = (if (required) block() else optional(block)) ?: return@sequence emptyList<V>()
+        val remaining = zeroOrMore {
+            separator()
+            block()
+        }
+        listOf(first) + remaining
+    }
+
     protected fun <V> RuleScope.oneOrMore(block: RuleScope.() -> V) = this@GrammarParser.oneOrMore(block).resolve()
     protected fun <V> oneOrMore(block: RuleScope.() -> V) = DelegateRunner<List<V>> {
         val results = mutableListOf<V>()
@@ -235,9 +245,19 @@ abstract class GrammarParser<T>(internal val input: String) {
     }
 
     protected fun RuleScope.whitespace(optional: Boolean = false) = this@GrammarParser.whitespace(optional).resolve()
-    protected fun whitespace(optional: Boolean = true) = regex("[ \t]" + if (optional) "*" else "+")
+    protected fun whitespace(optional: Boolean = true) = regex("\\s" + if (optional) "*" else "+")
     protected fun <T: Any> whitespace(optional: Boolean = true, block: () -> T) : T {
         val whitespace by whitespace(optional)
+        whitespace()
+        val res = block()
+        whitespace()
+        return res
+    }
+
+    protected fun RuleScope.space(optional: Boolean = false) = this@GrammarParser.space(optional).resolve()
+    protected fun space(optional: Boolean = true) = regex("[ \t]" + if (optional) "*" else "+")
+    protected fun <T: Any> space(optional: Boolean = true, block: () -> T) : T {
+        val whitespace by space(optional)
         whitespace()
         val res = block()
         whitespace()
