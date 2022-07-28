@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.martmists:kotpack:1.0.0")
+    implementation("com.martmists.kotpack:kotpack:1.0.4")
 }
 ```
 
@@ -167,6 +167,15 @@ sequence(memo {
     )
     rule4()
 })
+// OR:
+sequence {
+    first(
+        ::rule1,
+        ::rule2,
+        ::rule3,
+    )
+    rule4()
+}.memo()
 
 // For left-recursion you need to use memoLeft
 // Not compatible with memo
@@ -179,6 +188,15 @@ sequence(memoLeft {
     char('+')
     expr()
 })
+// OR:
+sequence {
+    first(
+        ::rule,
+        ::term,
+    )
+    char('+')
+    expr()
+}.memoLeft()
 ```
 
 ## License

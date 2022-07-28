@@ -42,7 +42,7 @@ kotlin {
 
 tasks {
     named("publish") {
-        dependsOn("test")
+        dependsOn("allTests")
     }
 
     withType<KotlinCompile> {
