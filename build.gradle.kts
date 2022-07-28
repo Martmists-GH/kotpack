@@ -1,19 +1,43 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.6.21"
+    kotlin("multiplatform") version "1.7.10"
     `maven-publish`
 }
 
-group = "com.martmists"
-version = "1.0.3"
+group = "com.martmists.kotpack"
+version = "1.0.4"
 
 repositories {
     mavenCentral()
+    maven("https://maven.martmists.com/releases")
 }
 
-dependencies {
-    testImplementation(kotlin("test"))
+kotlin {
+    jvm()
+    js(IR) {
+        browser()
+        nodejs()
+    }
+    linuxX64()
+    linuxArm64()
+    mingwX64()
+    macosX64()
+    macosArm64()
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation("com.martmists.commons:commons-mpp-datastructures:1.0.4")
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+    }
 }
 
 tasks {
@@ -24,9 +48,6 @@ tasks {
     withType<KotlinCompile> {
         kotlinOptions {
             jvmTarget = "1.8"
-            freeCompilerArgs += listOf(
-                "-opt-in=kotlin.ExperimentalStdlibApi",
-            )
         }
     }
 }
@@ -43,16 +64,6 @@ if (project.ext.has("mavenToken")) {
                 }
             }
         }
-
-        publications {
-            create<MavenPublication>("jvm") {
-                groupId = project.group as String
-                artifactId = project.name
-                version = project.version as String
-
-                from(components["java"])
-            }
-        }
     }
 } else if (System.getenv("CI") == "true") {
     publishing {
@@ -64,16 +75,6 @@ if (project.ext.has("mavenToken")) {
                     username = "github-actions"
                     password = System.getenv("DEPLOY_KEY")!!
                 }
-            }
-        }
-
-        publications {
-            create<MavenPublication>("jvm") {
-                groupId = project.group as String
-                artifactId = project.name
-                version = project.version as String
-
-                from(components["java"])
             }
         }
 

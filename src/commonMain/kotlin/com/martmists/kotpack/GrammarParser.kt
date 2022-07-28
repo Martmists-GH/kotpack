@@ -1,11 +1,9 @@
 package com.martmists.kotpack
 
-import java.util.*
+import com.martmists.commons.datastructures.*
 
-abstract class GrammarParser<T>(internal val input: String) {
-    private val errors = PriorityQueue<NoMatchException> { a, b ->
-        a.depth().compareTo(b.depth())
-    }
+abstract class GrammarParser<T>(private val input: String) {
+    private val errors = MinHeap(NoMatchException::depth)
 
     // The code for `memo` and `memoLeft` was more-or-less adapted from Guido van Rossum's implementation on
     // his blog on PEG parsers: https://medium.com/@gvanrossum_83706/peg-parsing-series-de5d41b2ed60
@@ -79,26 +77,23 @@ abstract class GrammarParser<T>(internal val input: String) {
 
     @PublishedApi
     internal fun getErrorMessage(rule: String, message: String): String {
-        val parts = remaining.split('\n', limit=2)
-        val nextRemaining = parts.last()
-        val currentLine: String
-        val errorPos: Int
-        if (nextRemaining == input) {
-            currentLine = input
-            errorPos = pos
+        val parsed = input.substring(0, pos)
+        val lineIndex = parsed.count { it == '\n' }
+        val lines = input.split('\n', limit = lineIndex + 2)
+        val context = if (lines.size == 1) {
+            listOf(lines[0])
         } else {
-            val inputUntilEOL = input.substring(0, input.length - nextRemaining.length - 1)
-            currentLine = inputUntilEOL.split('\n').last()
-            val lineOffset = input.length - (nextRemaining.length + currentLine.length + 1)
-            errorPos = pos - lineOffset
+            lines.subList(maxOf(0, lineIndex - 2), lineIndex + 1)
         }
-        return "Error in rule '$rule' at \n $currentLine\n${" ".repeat(errorPos)}/\u200B\\\nError: $message"
+        val startStr = parsed.split('\n').last()
+        val offset = startStr.length
+        return "Error in rule '$rule' at line ${lineIndex + 1}: \n ${context.joinToString("\n ")}\n${" ".repeat(offset)}/\u200B\\\nError: $message"
     }
 
     protected fun RuleScope.throwExc(message: String, cause: NoMatchException? = null): Nothing = throwExc(rule, message, cause)
     protected fun throwExc(rule: String, message: String, cause: NoMatchException? = null): Nothing {
         val err = NoMatchException(rule, this, message, cause)
-        errors.add(err)
+        errors.push(err)
         throw err
     }
 
@@ -181,9 +176,11 @@ abstract class GrammarParser<T>(internal val input: String) {
             } catch (e: NoMatchException) {
                 errors.add(e)
                 restore()
-            } catch (e: StackOverflowError) {
-                throw RuntimeException("Error: Non-memoized recursion detected while parsing rule '$rule'")
             }
+            // This is no longer available on Kotlin Multiplatform
+//            catch (e: StackOverflowError) {
+//                throw RuntimeException("Error: Non-memoized recursion detected while parsing rule '$rule'")
+//            }
         }
         throwExc(rule, "Expected one of: [${errors.joinToString(transform = NoMatchException::rule)}]", errors.minByOrNull(NoMatchException::depth))
     }
