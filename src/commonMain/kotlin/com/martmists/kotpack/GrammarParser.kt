@@ -2,7 +2,11 @@ package com.martmists.kotpack
 
 import com.martmists.commons.datastructures.*
 
-abstract class GrammarParser<T>(private val input: String) {
+abstract class GrammarParser<T> {
+    protected lateinit var input: String
+    protected var pos = 0
+    internal fun getPos() = pos
+
     private val errors = MinHeap(NoMatchException::depth)
 
     // The code for `memo` and `memoLeft` was more-or-less adapted from Guido van Rossum's implementation on
@@ -57,21 +61,18 @@ abstract class GrammarParser<T>(private val input: String) {
             }
         }
     }
-
-    internal var pos = 0
-
     private val saved = Stack<Int>()
 
-    private val remaining: String
+    protected val remaining: String
         get() = input.substring(pos)
 
-    private fun save() {
+    protected fun save() {
         saved.push(pos)
     }
-    private fun restore() {
+    protected fun restore() {
         pos = saved.pop()
     }
-    private fun drop() {
+    protected fun drop() {
         saved.pop()
     }
 
@@ -126,6 +127,13 @@ abstract class GrammarParser<T>(private val input: String) {
         }
         pos++
         c
+    }
+
+    protected fun RuleScope.chars(cs: CharSequence) = this@GrammarParser.chars(cs).resolve()
+    protected fun chars(cs: CharSequence) = DelegateRunner {
+        first(
+            *cs.map { firstBlock { char(it) } }.toTypedArray()
+        )
     }
 
     protected fun RuleScope.string(s: String) = this@GrammarParser.string(s).resolve()
@@ -241,8 +249,11 @@ abstract class GrammarParser<T>(private val input: String) {
         results
     }
 
+    @Deprecated("Removed in 1.0.6")
     protected fun RuleScope.whitespace(optional: Boolean = false) = this@GrammarParser.whitespace(optional).resolve()
+    @Deprecated("Removed in 1.0.6")
     protected fun whitespace(optional: Boolean = true) = regex("\\s" + if (optional) "*" else "+")
+    @Deprecated("Removed in 1.0.6")
     protected fun <T: Any> whitespace(optional: Boolean = true, block: () -> T) : T {
         val whitespace by whitespace(optional)
         whitespace()
@@ -251,8 +262,11 @@ abstract class GrammarParser<T>(private val input: String) {
         return res
     }
 
+    @Deprecated("Removed in 1.0.6")
     protected fun RuleScope.space(optional: Boolean = false) = this@GrammarParser.space(optional).resolve()
+    @Deprecated("Removed in 1.0.6")
     protected fun space(optional: Boolean = true) = regex("[ \t]" + if (optional) "*" else "+")
+    @Deprecated("Removed in 1.0.6")
     protected fun <T: Any> space(optional: Boolean = true, block: () -> T) : T {
         val whitespace by space(optional)
         whitespace()
@@ -261,7 +275,16 @@ abstract class GrammarParser<T>(private val input: String) {
         return res
     }
 
-    fun tryParse() = try {
+    fun tryParse(input: String) = try {
+        this.input = input
+        this.pos = 0
+        while (this.errors.isNotEmpty()) {
+            this.errors.pop()
+        }
+        while (this.saved.isNotEmpty()) {
+            this.saved.pop()
+        }
+
         root()
     } catch (e: NoMatchException) {
         throw errors.peek()

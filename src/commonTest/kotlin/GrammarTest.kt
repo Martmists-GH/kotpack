@@ -1,7 +1,7 @@
 import com.martmists.kotpack.GrammarParser
 import kotlin.test.*
 
-class DummyParser(input: String) : GrammarParser<String>(input) {
+class DummyParser : GrammarParser<String>() {
     override val root by sequence {
         val res = first(
             ::expr,
@@ -52,31 +52,31 @@ class DummyParser(input: String) : GrammarParser<String>(input) {
 class GrammarTest {
     @Test
     fun test() {
-        val parser = DummyParser("1+2")
-        val res = parser.tryParse()
+        val parser = DummyParser()
+        val res = parser.tryParse("1+2")
         assertEquals("1+2", res)
     }
 
     @Test
     fun test2() {
-        val parser = DummyParser("1, 2, 3, 4")
-        val res = parser.tryParse()
+        val parser = DummyParser()
+        val res = parser.tryParse("1, 2, 3, 4")
         assertEquals("1,2,3,4", res)
     }
 
     @Test
     fun test3() {
-        val parser = DummyParser("(1 + 2 ) - (3 + 4)")
-        val res = parser.tryParse()
+        val parser = DummyParser()
+        val res = parser.tryParse("(1 + 2 ) - (3 + 4)")
         assertEquals("(1+2)-(3+4)", res)
     }
 
     @Test
     fun test4() {
-        val parser = DummyParser("12 + 01")
+        val parser = DummyParser()
 
         assertFails {
-            val res = parser.tryParse()
+            val res = parser.tryParse("12 + 01")
             assertEquals("12+01", res)
         }
     }

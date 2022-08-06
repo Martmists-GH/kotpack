@@ -10,7 +10,7 @@ import kotlin.test.*
  * num          := r"[0-9]+(\.[0-9]+)?";
  * whitespace   := r"[ \t]*";
  */
-class MathParser(input: String) : GrammarParser<Double>(input) {  // root rule returns a Double
+class MathParser : GrammarParser<Double>() {  // root rule returns a Double
     override val root by sequence {
         val res = expression()
         eoi()  // we must hit end of input
@@ -61,8 +61,8 @@ class MathParser(input: String) : GrammarParser<Double>(input) {  // root rule r
 class ReadmeTest {
     @Test
     fun test() {
-        val parser = MathParser("1 + 2 * 3")
-        val result = parser.tryParse()
+        val parser = MathParser()
+        val result = parser.tryParse("1 + 2 * 3")
 
         // Note that we didn't use anything to follow PEMDAS, so it just evaluates LTR
         assertEquals(9.0, result)
